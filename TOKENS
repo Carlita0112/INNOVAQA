@@ -1,0 +1,64 @@
+//Este contrato permitirá a los usuarios recibir tokens como recompensa por su participación y progreso en el programa.
+
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+// Importamos la implementación de ERC-20 de OpenZeppelin para manejar nuestro token de recompensa
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+// Contrato para manejar las certificaciones y recompensas
+contract InnovAQA is ERC20 {
+    // Dirección del propietario del contrato
+    address public owner;
+
+    // Estructura para almacenar información de certificación
+    struct Certification {
+        bool isValid;
+        string data;
+        uint256 timestamp;
+    }
+
+    // Mapeo de direcciones de usuarios a sus certificaciones
+    mapping(address => Certification) public certifications;
+
+    // Evento que se emite cuando se otorga una nueva certificación
+    event CertificationGranted(address indexed user, string data, uint256 timestamp);
+
+    // Constructor para crear el token y asignar el propietario
+    constructor() ERC20("InnovAQAToken", "IAQT") {
+        owner = msg.sender;
+        _mint(owner, 1000000 * (10 ** uint256(decimals()))); // Mint inicial de tokens para el propietario
+    }
+
+    // Función para otorgar certificaciones y recompensas
+    function grantCertification(address _user, string memory _data) public {
+        require(msg.sender == owner, "Solo el propietario puede otorgar certificaciones.");
+        require(!certifications[_user].isValid, "El usuario ya tiene una certificación válida.");
+
+        certifications[_user] = Certification({
+            isValid: true,
+            data: _data,
+            timestamp: block.timestamp
+        });
+
+        emit CertificationGranted(_user, _data, block.timestamp);
+
+        // Otorgamos tokens como recompensa
+        _transfer(owner, _user, 100 * (10 ** uint256(decimals())));
+    }
+
+    // Función para verificar la certificación de un usuario
+    function verifyCertification(address _user) public view returns (Certification memory) {
+        require(certifications[_user].isValid, "No hay certificación válida para este usuario.");
+        return certifications[_user];
+    }
+
+    // Función para revocar certificaciones
+    function revokeCertification(address _user) public {
+        require(msg.sender == owner, "Solo el propietario puede revocar certificaciones.");
+        require(certifications[_user].isValid, "No hay certificación válida para revocar.");
+
+        certifications[_user].isValid = false;
+    }
+}
